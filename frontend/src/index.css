@@ -1,0 +1,26 @@
+@import url('https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+  --ink: #0A0A0B;
+  --ink-2: #111114;
+  --panel: #151518;
+  --line: #26262B;
+  --line-2: #33333A;
+  --fog: #8A8A94;
+  --fog-2: #5A5A63;
+  --paper: #EDEDEE;
+  --paper-dim: #C4C4C9;
+  --cite: #6EE7B7;
+  --flag: #F0785A;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: var(--ink);
+  color: var(--paper);
+  font-family: 'Space Grotesk', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection { background: var(--cite); color: var(--ink); }

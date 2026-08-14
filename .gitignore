@@ -1,0 +1,22 @@
+# secrets - NEVER commit these
+.env
+
+# python
+venv/
+__pycache__/
+*.pyc
+
+# uploaded papers (user data)
+api_uploads/
+uploaded_papers/
+
+# vector store
+chroma_db/
+*.faiss
+
+# backup
+api_backup.pynode_modules/
+multi_doc_database/
+my_database/
+node_modules
+api_backup.py

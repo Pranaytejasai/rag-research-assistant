@@ -1,0 +1,5 @@
+Metric,Your RAG System,ChatGPT Baseline
+Accuracy,0.5,0.4
+Precision,0.82,0.4333333333333333
+Recall,0.5,0.4
+F1 Score,0.6021739130434782,0.41600000000000004

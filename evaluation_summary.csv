@@ -1,0 +1,9 @@
+Metric,Your RAG System,ChatGPT Baseline
+Answerable Accuracy,0.825,0.475
+Precision,0.76,0.4864864864864865
+Recall,0.95,0.9
+F1 Score,0.8444444444444444,0.631578947368421
+Faithfulness,1.0,0.7
+PubMedQA (Medical),0.5,0.2
+Hallucinations (of 20),6.0,19.0
+Correct Refusals (of 20),14.0,1.0
