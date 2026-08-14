@@ -11,22 +11,21 @@ class ArxivSearcher:
     def __init__(self):
         self.client = arxiv.Client(
             page_size=20,
-            delay_seconds=3.0,
-            num_retries=2
+            delay_seconds=1.0,
+            num_retries=1
         )
         print("ArXiv searcher ready")
 
     def search_papers(self, query, max_results=5, from_year=None, to_year=None):
-        # search arxiv by relevance, then filter by year range if given
-        try:
-            # fetch extra when filtering by year so we still get enough after filtering
+        import concurrent.futures
+
+        def _do_search():
             fetch_count = max_results * 3 if (from_year or to_year) else max_results
             search = arxiv.Search(
                 query=query,
                 max_results=fetch_count,
                 sort_by=arxiv.SortCriterion.Relevance
             )
-
             results = []
             for paper in self.client.results(search):
                 year = paper.published.year
@@ -46,6 +45,15 @@ class ArxivSearcher:
                 if len(results) >= max_results:
                     break
             return results
+
+        try:
+            # give ArXiv max 20 seconds, then give up (prevents freezing the backend)
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                future = executor.submit(_do_search)
+                return future.result(timeout=20)
+        except concurrent.futures.TimeoutError:
+            print("arxiv search timed out")
+            return []
         except Exception as e:
             print(f"search error: {e}")
             return []
