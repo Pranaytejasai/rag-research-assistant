@@ -4,7 +4,6 @@ import './App.css'
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
-// generate or reuse a unique session ID for this browser tab
 function getSessionId() {
   let id = sessionStorage.getItem('grounded_session')
   if (!id) {
@@ -110,6 +109,133 @@ function EmptyState({ message }) {
   )
 }
 
+function Landing({ onEnter }) {
+  const featureGroups = [
+    {
+      group: 'Ask & Verify',
+      items: [
+        ['Grounded Q&A', 'Ask questions across your papers — answers come only from the sources, never invented.'],
+        ['Trust scores', 'Every answer is checked claim-by-claim against the papers and scored for reliability.'],
+        ['Real citations', 'Answers cite the exact papers and pages they draw from.'],
+      ]
+    },
+    {
+      group: 'Live Paper Search',
+      items: [
+        ['ArXiv, PubMed, CrossRef', 'Search millions of live papers across three major databases.'],
+        ['Filters', 'Narrow by number of results and publication year range.'],
+        ['Cite & save', 'Get APA/MLA/Harvard citations or add papers to your library.'],
+      ]
+    },
+    {
+      group: 'Analyze',
+      items: [
+        ['Compare papers', 'See how papers agree or differ on any topic.'],
+        ['Summaries & findings', 'Per-paper summaries and extracted key findings.'],
+        ['Gaps & hypotheses', 'Surface research gaps and generate new hypotheses.'],
+        ['Contradictions', 'Detect where papers disagree.'],
+        ['Literature review', 'Generate reviews from short to thesis-length.'],
+      ]
+    },
+    {
+      group: 'Visualize',
+      items: [
+        ['Similarity', 'Measure how related your papers are.'],
+        ['Mind map', 'See concept connections as a graph.'],
+        ['Timeline', 'Trace how research evolved by year.'],
+      ]
+    },
+    {
+      group: 'Accessibility',
+      items: [
+        ['Voice input & output', 'Ask by speaking, listen to answers read aloud.'],
+        ['12 languages', 'Translate answers, including Telugu, Hindi, Spanish and more.'],
+      ]
+    },
+    {
+      group: 'Stay Current',
+      items: [
+        ['Email alerts', 'Track topics and get new papers delivered to your inbox.'],
+        ['Multi-source', 'Alerts pull from ArXiv, PubMed and CrossRef together.'],
+      ]
+    },
+  ]
+
+  const pipeline = [
+    ['Retrieve', 'Finds the most relevant passages from your papers using vector search.'],
+    ['Augment', 'Feeds those passages to the language model as grounded context.'],
+    ['Generate', 'Produces an answer built only from the retrieved evidence.'],
+    ['Verify', 'Checks each claim back against the sources and scores the trust.'],
+  ]
+
+  return (
+    <div className="landing">
+      <div className="landing-grid" aria-hidden="true"></div>
+
+      <section className="l-hero">
+        <div className="landing-meta">
+          <span className="lm-dot"></span>
+          RAG Research Assistant · Retrieval Grounding
+        </div>
+        <h1 className="landing-title">
+          Answers that stay
+          <span className="lt-line"><em>grounded</em><span className="lt-rule"></span></span>
+          in the source.
+        </h1>
+        <p className="landing-sub">
+          A research assistant that reads your papers, searches the live literature,
+          and shows its working — every claim traced back to where it came from.
+        </p>
+        <button className="landing-cta" onClick={onEnter}>
+          Open the workspace <span className="cta-arrow">→</span>
+        </button>
+      </section>
+
+      <section className="l-section">
+        <div className="l-eyebrow">How it works</div>
+        <h2 className="l-h2">Retrieval-augmented, then verified.</h2>
+        <div className="l-pipeline">
+          {pipeline.map(([k, v], i) => (
+            <div className="pipe-step" key={i}>
+              <div className="pipe-num">{String(i + 1).padStart(2, '0')}</div>
+              <div className="pipe-k">{k}</div>
+              <div className="pipe-v">{v}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="l-section">
+        <div className="l-eyebrow">Everything inside</div>
+        <h2 className="l-h2">Fifteen tools, one library.</h2>
+        <div className="l-groups">
+          {featureGroups.map((fg, i) => (
+            <div className="l-group" key={i}>
+              <div className="lg-title">{fg.group}</div>
+              <div className="lg-items">
+                {fg.items.map(([k, v], j) => (
+                  <div className="lg-item" key={j}>
+                    <div className="lgi-k">{k}</div>
+                    <div className="lgi-v">{v}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="l-close">
+        <h2 className="l-close-title">Ready to dig in?</h2>
+        <button className="landing-cta" onClick={onEnter}>
+          Open the workspace <span className="cta-arrow">→</span>
+        </button>
+        <div className="l-foot">RAG-Based Academic Research Assistant · MSc AI &amp; ML · University of Limerick</div>
+      </section>
+    </div>
+  )
+}
+
 const TABS = [
   { id: 'ask', label: 'Ask' },
   { id: 'compare', label: 'Compare' },
@@ -133,6 +259,7 @@ const NEED_PAPERS = ['ask', 'compare', 'summaries', 'contradictions', 'findings'
 const NEED_TWO = ['compare', 'similarity']
 
 function App() {
+  const [showLanding, setShowLanding] = useState(true)
   const [papers, setPapers] = useState([])
   const [paperSources, setPaperSources] = useState({})
   const [uploading, setUploading] = useState(false)
@@ -489,6 +616,10 @@ function App() {
   const paperCount = papers.length
   const blockedNoPapers = NEED_PAPERS.includes(tab) && paperCount === 0
   const blockedNeedTwo = NEED_TWO.includes(tab) && paperCount < 2
+
+  if (showLanding) {
+    return <Landing onEnter={() => setShowLanding(false)} />
+  }
 
   return (
     <div className="app">
