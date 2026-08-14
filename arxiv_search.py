@@ -369,44 +369,60 @@ class ResearchAlertSystem:
         return {"new": new_papers, "all": all_papers}
 
     def send_email_alert(self, to_email, topic, papers):
-        import smtplib
         import os
-        from email.mime.text import MIMEText
-        from email.mime.multipart import MIMEMultipart
+        import requests
 
-        gmail = os.getenv("GMAIL_ADDRESS")
-        app_pw = os.getenv("GMAIL_APP_PASSWORD")
+        api_key = os.getenv("RESEND_API_KEY")
 
-        if not gmail or not app_pw:
+        if not api_key:
             return {"success": False, "error": "Email not configured"}
         if not papers:
             return {"success": False, "error": "No papers to send"}
 
-        # build the email body
-        body = f"New papers on your topic: {topic}\n\n"
+        # build the email body (HTML)
+        html = f"<h2>New papers on: {topic}</h2>"
         for i, p in enumerate(papers, 1):
-            body += f"{i}. {p.get('title', 'Untitled')}\n"
+            title = p.get('title', 'Untitled')
             authors = ", ".join(p.get('authors', [])[:3])
-            body += f"   Authors: {authors}\n"
-            body += f"   Published: {p.get('published', 'n/a')}\n"
+            published = p.get('published', 'n/a')
+            source = p.get('source', '')
+            link = ""
             if p.get('arxiv_id'):
-                body += f"   Link: https://arxiv.org/abs/{p['arxiv_id']}\n"
-            body += "\n"
-        body += "— Sent by your RAG Research Assistant"
+                link = f"https://arxiv.org/abs/{p['arxiv_id']}"
+            elif p.get('pubmed_url'):
+                link = p['pubmed_url']
+            elif p.get('doi_url'):
+                link = p['doi_url']
 
-        msg = MIMEMultipart()
-        msg["From"] = gmail
-        msg["To"] = to_email
-        msg["Subject"] = f"Research Alert: {len(papers)} new papers on '{topic}'"
-        msg.attach(MIMEText(body, "plain"))
+            html += f"<p><b>{i}. {title}</b> <span style='color:#888;font-size:12px'>[{source}]</span><br>"
+            html += f"Authors: {authors}<br>"
+            html += f"Published: {published}<br>"
+            if link:
+                html += f"<a href='{link}'>View paper</a></p>"
+            else:
+                html += "</p>"
+        html += "<hr><p style='color:#888;font-size:12px'>Sent by your RAG Research Assistant</p>"
 
         try:
-            server = smtplib.SMTP("smtp.gmail.com", 587)
-            server.starttls()
-            server.login(gmail, app_pw)
-            server.send_message(msg)
-            server.quit()
-            return {"success": True, "sent_to": to_email, "count": len(papers)}
+            response = requests.post(
+                "https://api.resend.com/emails",
+                headers={
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "from": "onboarding@resend.dev",
+                    "to": [to_email],
+                    "subject": f"Research Alert: {len(papers)} new papers on '{topic}'",
+                    "html": html
+                },
+                timeout=15
+            )
+            if response.status_code in (200, 201):
+                return {"success": True, "sent_to": to_email, "count": len(papers)}
+            else:
+                print(f"resend error: {response.status_code} {response.text}")
+                return {"success": False, "error": f"Send failed ({response.status_code})"}
         except Exception as e:
             print(f"email error: {e}")
             return {"success": False, "error": str(e)}
