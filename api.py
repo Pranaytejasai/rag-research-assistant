@@ -337,3 +337,13 @@ async def alert_add(data: dict):
 async def alert_check(data: dict):
     result = alert_system.check_for_new_papers(data.get("topic", ""))
     return {"new": result["new"], "all": result["all"]}
+
+@app.post("/alert-email")
+async def alert_email(data: dict):
+    to_email = data.get("email", "")
+    topic = data.get("topic", "")
+    if not to_email or not topic:
+        return {"success": False, "error": "Email and topic required"}
+    result = alert_system.check_for_new_papers(topic)
+    papers = result.get("all", [])
+    return alert_system.send_email_alert(to_email, topic, papers)

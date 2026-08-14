@@ -15,7 +15,7 @@ function getSessionId() {
 }
 const SESSION_ID = getSessionId()
 const H = { 'Content-Type': 'application/json', 'X-Session-Id': SESSION_ID }
-const HG = { 'X-Session-Id': SESSION_ID }  // for GET / file uploads
+const HG = { 'X-Session-Id': SESSION_ID }
 
 const LANGUAGES = ['English', 'Spanish', 'French', 'German', 'Hindi', 'Telugu',
   'Chinese', 'Arabic', 'Portuguese', 'Japanese', 'Italian', 'Russian']
@@ -158,6 +158,9 @@ function App() {
   const [maxResults, setMaxResults] = useState(5)
   const [fromYear, setFromYear] = useState('')
   const [toYear, setToYear] = useState('')
+
+  const [alertEmail, setAlertEmail] = useState('')
+  const [emailStatus, setEmailStatus] = useState('')
 
   const [language, setLanguage] = useState('English')
   const [displayAnswer, setDisplayAnswer] = useState('')
@@ -435,7 +438,7 @@ function App() {
 
   const checkAlerts = async () => {
     if (!searchQuery.trim()) return
-    setLoading(true); setSearchResults([])
+    setLoading(true); setSearchResults([]); setEmailStatus('')
     try {
       await fetch(`${API}/alert-add`, {
         method: 'POST', headers: H,
@@ -451,6 +454,28 @@ function App() {
     setLoading(false)
   }
 
+  const sendAlertEmail = async () => {
+    if (!alertEmail.trim() || !searchQuery.trim()) {
+      setEmailStatus('Enter a topic and email first')
+      return
+    }
+    setEmailStatus('Sending… (checking all sources)')
+    try {
+      const res = await fetch(`${API}/alert-email`, {
+        method: 'POST', headers: H,
+        body: JSON.stringify({ email: alertEmail, topic: searchQuery })
+      })
+      const data = await res.json()
+      if (data.success) {
+        setEmailStatus(`✓ Sent ${data.count} papers to ${alertEmail}`)
+      } else {
+        setEmailStatus(`Failed: ${data.error || 'unknown error'}`)
+      }
+    } catch {
+      setEmailStatus('Failed to send')
+    }
+  }
+
   const trustColor = (level) => {
     if (level === 'high') return 'var(--cite)'
     if (level === 'medium') return '#F2C14E'
@@ -458,7 +483,7 @@ function App() {
   }
 
   const resetView = () => {
-    setOutput(''); setOutputVerify(null); setSimData(null); setSearchResults([]); setMindmap(null); setTimeline(null); setAnswer(null); setCiteData(null);
+    setOutput(''); setOutputVerify(null); setSimData(null); setSearchResults([]); setMindmap(null); setTimeline(null); setAnswer(null); setCiteData(null); setEmailStatus('');
   }
 
   const paperCount = papers.length
@@ -789,12 +814,19 @@ function App() {
                   {loading ? 'Checking…' : 'Check →'}
                 </button>
               </div>
+              <div className="email-alert-row">
+                <input type="email" className="email-input" placeholder="your@email.com"
+                  value={alertEmail} onChange={e => setAlertEmail(e.target.value)} />
+                <button className="email-btn" onClick={sendAlertEmail}>📧 Email me these papers</button>
+              </div>
+              {emailStatus && <div className="email-status">{emailStatus}</div>}
               <div className="results">
                 {searchResults.map((paper, i) => {
-                  const link = paper.arxiv_id ? `https://arxiv.org/abs/${paper.arxiv_id}` : null
+                  const link = paper.arxiv_id ? `https://arxiv.org/abs/${paper.arxiv_id}` :
+                    paper.pubmed_url || paper.doi_url || null
                   return (
                     <div className="result-card" key={i}>
-                      <div className="result-title">🆕 {paper.title}</div>
+                      <div className="result-title">🆕 {paper.title} {paper.source && <span className="src-tag">{paper.source}</span>}</div>
                       <div className="result-meta">
                         {paper.authors?.slice(0, 3).join(', ')} · {paper.published}
                       </div>

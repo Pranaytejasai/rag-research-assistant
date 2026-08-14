@@ -309,3 +309,29 @@
 .filter-select:focus, .filter-input:focus { border-color: var(--cite); }
 .filter-input { width: 90px; }
 .filter-select { cursor: pointer; }
+
+.email-alert-row {
+  display: flex; gap: 12px; margin: 16px 0; flex-wrap: wrap;
+}
+.email-input {
+  flex: 1; min-width: 200px; padding: 12px 16px;
+  background: var(--ink-2); border: 1px solid var(--line-2);
+  border-radius: 10px; color: var(--paper); font-size: 14px;
+  font-family: 'Space Grotesk'; outline: none;
+}
+.email-input:focus { border-color: var(--cite); }
+.email-btn {
+  padding: 12px 20px; background: var(--cite); color: var(--ink);
+  border: none; border-radius: 10px; font-size: 14px; font-weight: 600;
+  cursor: pointer; font-family: 'Space Grotesk'; white-space: nowrap;
+}
+.email-btn:hover { opacity: 0.9; }
+.email-status {
+  font-size: 13px; color: var(--fog); margin-top: 8px;
+  font-family: 'JetBrains Mono', monospace;
+}
+.src-tag {
+  font-size: 10px; background: var(--line-2); color: var(--fog);
+  padding: 2px 8px; border-radius: 4px; margin-left: 8px;
+  font-family: 'JetBrains Mono', monospace; vertical-align: middle;
+}

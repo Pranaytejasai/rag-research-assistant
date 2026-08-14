@@ -304,40 +304,112 @@ class ResearchAlertSystem:
         return self.saved_topics
 
     def check_for_new_papers(self, topic, max_results=5):
-        # alerts stay sorted by newest — that's correct for alerts
         import arxiv
-        try:
-            client = arxiv.Client()
-            search = arxiv.Search(
-                query=topic,
-                max_results=max_results,
-                sort_by=arxiv.SortCriterion.SubmittedDate
-            )
-            new_papers = []
-            all_papers = []
+        import concurrent.futures
+
+        all_papers = []
+        new_papers = []
+
+        # --- Source 1: ArXiv (with timeout) ---
+        def _check_arxiv():
+            client = arxiv.Client(page_size=10, delay_seconds=1.0, num_retries=1)
+            search = arxiv.Search(query=topic, max_results=max_results,
+                                  sort_by=arxiv.SortCriterion.SubmittedDate)
+            papers = []
             for paper in client.results(search):
-                paper_id = paper.get_short_id()
-                paper_info = {
+                papers.append({
                     "title": paper.title,
                     "authors": [a.name for a in paper.authors][:3],
                     "published": paper.published.strftime("%Y-%m-%d"),
-                    "arxiv_id": paper_id,
+                    "arxiv_id": paper.get_short_id(),
                     "pdf_url": paper.pdf_url,
-                    "summary": paper.summary[:300]
-                }
-                all_papers.append(paper_info)
-                if topic in self.seen_papers:
-                    if paper_id not in self.seen_papers[topic]:
-                        new_papers.append(paper_info)
-                        self.seen_papers[topic].add(paper_id)
-                else:
-                    self.seen_papers[topic] = {paper_id}
-                    new_papers.append(paper_info)
+                    "summary": paper.summary[:300],
+                    "source": "ArXiv"
+                })
+            return papers
 
-            return {"new": new_papers, "all": all_papers}
+        try:
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                future = executor.submit(_check_arxiv)
+                all_papers.extend(future.result(timeout=15))
         except Exception as e:
-            print(f"alert check error: {e}")
-            return {"new": [], "all": []}
+            print(f"arxiv alert error: {e}")
+
+        # --- Source 2: PubMed ---
+        try:
+            pubmed = PubMedSearcher()
+            pm_results = pubmed.search_papers(topic, max_results=max_results)
+            for p in pm_results:
+                p["source"] = "PubMed"
+                all_papers.append(p)
+        except Exception as e:
+            print(f"pubmed alert error: {e}")
+
+        # --- Source 3: CrossRef ---
+        try:
+            crossref = CrossRefSearcher()
+            cr_results = crossref.search_papers(topic, max_results=max_results)
+            for p in cr_results:
+                p["source"] = "CrossRef"
+                all_papers.append(p)
+        except Exception as e:
+            print(f"crossref alert error: {e}")
+
+        # --- Track which are "new" (unseen) ---
+        for paper in all_papers:
+            paper_id = paper.get("arxiv_id") or paper.get("pmid") or paper.get("doi") or paper.get("title", "")
+            if topic in self.seen_papers:
+                if paper_id not in self.seen_papers[topic]:
+                    new_papers.append(paper)
+                    self.seen_papers[topic].add(paper_id)
+            else:
+                self.seen_papers[topic] = {paper_id}
+                new_papers.append(paper)
+
+        return {"new": new_papers, "all": all_papers}
+
+    def send_email_alert(self, to_email, topic, papers):
+        import smtplib
+        import os
+        from email.mime.text import MIMEText
+        from email.mime.multipart import MIMEMultipart
+
+        gmail = os.getenv("GMAIL_ADDRESS")
+        app_pw = os.getenv("GMAIL_APP_PASSWORD")
+
+        if not gmail or not app_pw:
+            return {"success": False, "error": "Email not configured"}
+        if not papers:
+            return {"success": False, "error": "No papers to send"}
+
+        # build the email body
+        body = f"New papers on your topic: {topic}\n\n"
+        for i, p in enumerate(papers, 1):
+            body += f"{i}. {p.get('title', 'Untitled')}\n"
+            authors = ", ".join(p.get('authors', [])[:3])
+            body += f"   Authors: {authors}\n"
+            body += f"   Published: {p.get('published', 'n/a')}\n"
+            if p.get('arxiv_id'):
+                body += f"   Link: https://arxiv.org/abs/{p['arxiv_id']}\n"
+            body += "\n"
+        body += "— Sent by your RAG Research Assistant"
+
+        msg = MIMEMultipart()
+        msg["From"] = gmail
+        msg["To"] = to_email
+        msg["Subject"] = f"Research Alert: {len(papers)} new papers on '{topic}'"
+        msg.attach(MIMEText(body, "plain"))
+
+        try:
+            server = smtplib.SMTP("smtp.gmail.com", 587)
+            server.starttls()
+            server.login(gmail, app_pw)
+            server.send_message(msg)
+            server.quit()
+            return {"success": True, "sent_to": to_email, "count": len(papers)}
+        except Exception as e:
+            print(f"email error: {e}")
+            return {"success": False, "error": str(e)}
 
 if __name__ == "__main__":
     print("=== Testing CrossRef ===")
