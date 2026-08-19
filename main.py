@@ -1,6 +1,5 @@
 # Pranay Teja Chintakunta - 25079476
 # MSc AI & ML - University of Limerick
-# Main App - Bug Fixed Version
 
 import streamlit as st
 from arxiv_search import ArxivSearcher, PubMedSearcher, CrossRefSearcher, ResearchAlertSystem

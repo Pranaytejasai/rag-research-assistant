@@ -1,6 +1,6 @@
 # Pranay Teja Chintakunta - 25079476
 # MSc AI & ML - University of Limerick
-# Module 2 - Multi Document Reasoning - Bug Fixed Version
+# Module 2 - Multi Document Reasoning 
 
 from langchain_chroma import Chroma
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
